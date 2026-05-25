@@ -1,0 +1,38 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Model artifacts (train locally, commit intentionally if deploying to Render)
+# backend/model.pkl
+# backend/team_stats.json
+
+# Database
+backend/predictions.db
+
+# Environment variables
+.env.local
+.env
+.env*.local
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.DS_Store
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

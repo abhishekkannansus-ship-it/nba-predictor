@@ -1,0 +1,272 @@
+{
+  "DEN": {
+    "team_name": "Denver Nuggets",
+    "win_pct": 0.6809,
+    "avg_pts": 113.23,
+    "avg_pts_allowed": 108.91,
+    "off_rating": 118.5,
+    "def_rating": 113.0,
+    "last10": 5
+  },
+  "LAL": {
+    "team_name": "Los Angeles Lakers",
+    "win_pct": 0.5618,
+    "avg_pts": 117.35,
+    "avg_pts_allowed": 116.72,
+    "off_rating": 115.9,
+    "def_rating": 115.3,
+    "last10": 4
+  },
+  "GSW": {
+    "team_name": "Golden State Warriors",
+    "win_pct": 0.5542,
+    "avg_pts": 117.48,
+    "avg_pts_allowed": 115.19,
+    "off_rating": 117.8,
+    "def_rating": 115.2,
+    "last10": 7
+  },
+  "PHX": {
+    "team_name": "Phoenix Suns",
+    "win_pct": 0.5698,
+    "avg_pts": 115.64,
+    "avg_pts_allowed": 113.42,
+    "off_rating": 117.6,
+    "def_rating": 114.6,
+    "last10": 4
+  },
+  "ORL": {
+    "team_name": "Orlando Magic",
+    "win_pct": 0.5618,
+    "avg_pts": 109.66,
+    "avg_pts_allowed": 107.45,
+    "off_rating": 113.4,
+    "def_rating": 111.3,
+    "last10": 4
+  },
+  "HOU": {
+    "team_name": "Houston Rockets",
+    "win_pct": 0.5,
+    "avg_pts": 114.33,
+    "avg_pts_allowed": 113.21,
+    "off_rating": 114.5,
+    "def_rating": 113.4,
+    "last10": 4
+  },
+  "NYK": {
+    "team_name": "New York Knicks",
+    "win_pct": 0.6,
+    "avg_pts": 112.4,
+    "avg_pts_allowed": 108.73,
+    "off_rating": 118.2,
+    "def_rating": 113.4,
+    "last10": 5
+  },
+  "BOS": {
+    "team_name": "Boston Celtics",
+    "win_pct": 0.7921,
+    "avg_pts": 118.36,
+    "avg_pts_allowed": 107.63,
+    "off_rating": 123.2,
+    "def_rating": 111.6,
+    "last10": 9
+  },
+  "IND": {
+    "team_name": "Indiana Pacers",
+    "win_pct": 0.55,
+    "avg_pts": 121.55,
+    "avg_pts_allowed": 119.01,
+    "off_rating": 121.0,
+    "def_rating": 118.0,
+    "last10": 4
+  },
+  "WAS": {
+    "team_name": "Washington Wizards",
+    "win_pct": 0.1829,
+    "avg_pts": 113.74,
+    "avg_pts_allowed": 123.04,
+    "off_rating": 110.5,
+    "def_rating": 119.6,
+    "last10": 1
+  },
+  "CHA": {
+    "team_name": "Charlotte Hornets",
+    "win_pct": 0.2561,
+    "avg_pts": 106.59,
+    "avg_pts_allowed": 116.83,
+    "off_rating": 109.3,
+    "def_rating": 119.8,
+    "last10": 3
+  },
+  "ATL": {
+    "team_name": "Atlanta Hawks",
+    "win_pct": 0.4337,
+    "avg_pts": 118.3,
+    "avg_pts_allowed": 120.64,
+    "off_rating": 117.2,
+    "def_rating": 119.4,
+    "last10": 2
+  },
+  "MIA": {
+    "team_name": "Miami Heat",
+    "win_pct": 0.5393,
+    "avg_pts": 109.09,
+    "avg_pts_allowed": 108.12,
+    "off_rating": 114.0,
+    "def_rating": 112.2,
+    "last10": 4
+  },
+  "DET": {
+    "team_name": "Detroit Pistons",
+    "win_pct": 0.1707,
+    "avg_pts": 109.88,
+    "avg_pts_allowed": 118.99,
+    "off_rating": 109.7,
+    "def_rating": 118.8,
+    "last10": 2
+  },
+  "TOR": {
+    "team_name": "Toronto Raptors",
+    "win_pct": 0.3049,
+    "avg_pts": 112.35,
+    "avg_pts_allowed": 118.79,
+    "off_rating": 112.3,
+    "def_rating": 118.8,
+    "last10": 2
+  },
+  "MIN": {
+    "team_name": "Minnesota Timberwolves",
+    "win_pct": 0.6633,
+    "avg_pts": 112.08,
+    "avg_pts_allowed": 106.0,
+    "off_rating": 115.6,
+    "def_rating": 109.0,
+    "last10": 3
+  },
+  "BKN": {
+    "team_name": "Brooklyn Nets",
+    "win_pct": 0.3902,
+    "avg_pts": 110.37,
+    "avg_pts_allowed": 113.26,
+    "off_rating": 113.2,
+    "def_rating": 116.1,
+    "last10": 5
+  },
+  "CLE": {
+    "team_name": "Cleveland Cavaliers",
+    "win_pct": 0.5638,
+    "avg_pts": 110.78,
+    "avg_pts_allowed": 109.38,
+    "off_rating": 115.2,
+    "def_rating": 112.7,
+    "last10": 3
+  },
+  "MEM": {
+    "team_name": "Memphis Grizzlies",
+    "win_pct": 0.3293,
+    "avg_pts": 105.82,
+    "avg_pts_allowed": 112.82,
+    "off_rating": 107.2,
+    "def_rating": 114.3,
+    "last10": 3
+  },
+  "NOP": {
+    "team_name": "New Orleans Pelicans",
+    "win_pct": 0.5682,
+    "avg_pts": 113.69,
+    "avg_pts_allowed": 110.26,
+    "off_rating": 117.4,
+    "def_rating": 112.9,
+    "last10": 4
+  },
+  "CHI": {
+    "team_name": "Chicago Bulls",
+    "win_pct": 0.4762,
+    "avg_pts": 112.24,
+    "avg_pts_allowed": 113.71,
+    "off_rating": 114.9,
+    "def_rating": 116.3,
+    "last10": 5
+  },
+  "OKC": {
+    "team_name": "Oklahoma City Thunder",
+    "win_pct": 0.6848,
+    "avg_pts": 118.52,
+    "avg_pts_allowed": 111.23,
+    "off_rating": 119.5,
+    "def_rating": 112.1,
+    "last10": 6
+  },
+  "UTA": {
+    "team_name": "Utah Jazz",
+    "win_pct": 0.378,
+    "avg_pts": 115.66,
+    "avg_pts_allowed": 120.55,
+    "off_rating": 115.5,
+    "def_rating": 120.4,
+    "last10": 2
+  },
+  "SAC": {
+    "team_name": "Sacramento Kings",
+    "win_pct": 0.5595,
+    "avg_pts": 116.36,
+    "avg_pts_allowed": 114.45,
+    "off_rating": 116.9,
+    "def_rating": 115.2,
+    "last10": 4
+  },
+  "SAS": {
+    "team_name": "San Antonio Spurs",
+    "win_pct": 0.2683,
+    "avg_pts": 112.1,
+    "avg_pts_allowed": 118.59,
+    "off_rating": 110.0,
+    "def_rating": 116.4,
+    "last10": 6
+  },
+  "DAL": {
+    "team_name": "Dallas Mavericks",
+    "win_pct": 0.6058,
+    "avg_pts": 115.34,
+    "avg_pts_allowed": 113.05,
+    "off_rating": 117.6,
+    "def_rating": 115.4,
+    "last10": 5
+  },
+  "LAC": {
+    "team_name": "Los Angeles Clippers",
+    "win_pct": 0.6023,
+    "avg_pts": 114.58,
+    "avg_pts_allowed": 111.98,
+    "off_rating": 118.8,
+    "def_rating": 115.4,
+    "last10": 3
+  },
+  "POR": {
+    "team_name": "Portland Trail Blazers",
+    "win_pct": 0.2561,
+    "avg_pts": 106.37,
+    "avg_pts_allowed": 115.39,
+    "off_rating": 108.3,
+    "def_rating": 117.5,
+    "last10": 2
+  },
+  "MIL": {
+    "team_name": "Milwaukee Bucks",
+    "win_pct": 0.5795,
+    "avg_pts": 118.38,
+    "avg_pts_allowed": 116.12,
+    "off_rating": 118.4,
+    "def_rating": 115.8,
+    "last10": 4
+  },
+  "PHI": {
+    "team_name": "Philadelphia 76Ers",
+    "win_pct": 0.5618,
+    "avg_pts": 114.06,
+    "avg_pts_allowed": 111.25,
+    "off_rating": 116.9,
+    "def_rating": 113.8,
+    "last10": 6
+  }
+}
