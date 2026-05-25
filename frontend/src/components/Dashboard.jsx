@@ -5,7 +5,6 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  Title,
   Tooltip,
   Legend,
   Filler,
@@ -14,31 +13,23 @@ import { Line } from "react-chartjs-2";
 import { getAccuracy, saveResult } from "../api";
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  CategoryScale, LinearScale, PointElement, LineElement,
+  Tooltip, Legend, Filler
 );
 
 const LINE_OPTIONS = {
   responsive: true,
   plugins: {
     legend: { display: false },
-    title: {
-      display: true,
-      text: "Prediction Accuracy Over Time",
-      color: "#fff",
-      font: { size: 14, weight: "bold" },
-      padding: { bottom: 16 },
-    },
     tooltip: {
-      callbacks: {
-        label: (ctx) => ` ${ctx.parsed.y}% accuracy`,
-      },
+      callbacks: { label: (ctx) => `  ${ctx.parsed.y}% accuracy` },
+      backgroundColor: "#16162a",
+      borderColor: "rgba(255,107,53,0.25)",
+      borderWidth: 1,
+      titleColor: "#f0f0ff",
+      bodyColor: "#FF8C42",
+      padding: 10,
+      cornerRadius: 8,
     },
   },
   scales: {
@@ -46,22 +37,32 @@ const LINE_OPTIONS = {
       min: 0,
       max: 100,
       ticks: {
-        color: "#aab",
+        color: "#5a5a7a",
         callback: (v) => v + "%",
+        font: { family: "Inter", size: 11 },
       },
-      grid: { color: "rgba(255,255,255,0.08)" },
+      grid: { color: "rgba(255,255,255,0.04)" },
+      border: { display: false },
     },
     x: {
-      ticks: { color: "#aab" },
+      ticks: { color: "#5a5a7a", font: { family: "Inter", size: 11 } },
       grid: { display: false },
+      border: { display: false },
     },
   },
 };
 
+const STAT_CONFIGS = [
+  { key: "accuracy",          label: "Accuracy",          format: (v) => `${v ?? 0}%`, accent: true },
+  { key: "total_predictions", label: "Predictions",        format: (v) => v ?? 0 },
+  { key: "correct",           label: "Correct",            format: (v) => v ?? 0 },
+  { key: "total_with_result", label: "With Result",        format: (v) => v ?? 0 },
+];
+
 export default function Dashboard() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [pendingId, setPendingId] = useState(null); // which row is being edited
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [pendingId, setPendingId] = useState(null);
 
   const reload = () => {
     setLoading(true);
@@ -83,21 +84,30 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <div className="loading">Loading dashboard...</div>;
+  if (loading) {
+    return (
+      <div className="loading-state">
+        <span className="spinner spinner-lg" />
+        <span>Loading dashboard…</span>
+      </div>
+    );
+  }
 
   const hasOverTime = data?.accuracy_over_time?.length > 0;
+
   const lineChartData = hasOverTime
     ? {
         labels: data.accuracy_over_time.map((d) => `Game ${d.game}`),
         datasets: [
           {
-            label: "Accuracy",
             data: data.accuracy_over_time.map((d) => d.accuracy),
             borderColor: "#FF6B35",
-            backgroundColor: "rgba(255, 107, 53, 0.12)",
+            backgroundColor: "rgba(255,107,53,0.08)",
             fill: true,
-            tension: 0.35,
+            tension: 0.4,
             pointBackgroundColor: "#FF6B35",
+            pointBorderColor: "#0e0e1a",
+            pointBorderWidth: 2,
             pointRadius: 5,
             pointHoverRadius: 7,
           },
@@ -107,38 +117,43 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      <h2 className="section-title">Prediction Dashboard</h2>
+      <div className="page-hero">
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-subtitle">Track your prediction record over time</p>
+      </div>
 
+      {/* ── Stat cards ── */}
       <div className="stats-row">
-        {[
-          { label: "Overall Accuracy", value: `${data?.accuracy ?? 0}%` },
-          { label: "Total Predictions", value: data?.total_predictions ?? 0 },
-          { label: "Correct", value: data?.correct ?? 0 },
-          { label: "With Result", value: data?.total_with_result ?? 0 },
-        ].map((s) => (
-          <div className="stat-card" key={s.label}>
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+        {STAT_CONFIGS.map(({ key, label, format, accent }) => (
+          <div className={`stat-card ${accent ? "stat-card-accent" : ""}`} key={key}>
+            <div className="stat-value">{format(data?.[key])}</div>
+            <div className="stat-label">{label}</div>
           </div>
         ))}
       </div>
 
-      {lineChartData ? (
-        <div className="chart-card">
-          <Line data={lineChartData} options={LINE_OPTIONS} />
-        </div>
-      ) : (
-        <div className="chart-card empty-chart">
-          <p>Accuracy chart will appear after you add actual game results below.</p>
-        </div>
-      )}
+      {/* ── Accuracy chart ── */}
+      <div className="dash-card chart-card">
+        <div className="card-header">Accuracy Over Time</div>
+        {lineChartData ? (
+          <div className="chart-wrap">
+            <Line data={lineChartData} options={LINE_OPTIONS} />
+          </div>
+        ) : (
+          <div className="empty-chart">
+            Add actual game results below to see your accuracy trend.
+          </div>
+        )}
+      </div>
 
-      <div className="table-card">
-        <h3>All Predictions</h3>
+      {/* ── Predictions table ── */}
+      <div className="dash-card">
+        <div className="card-header">All Predictions</div>
+
         {!data?.predictions?.length ? (
-          <p className="empty-state">
-            No predictions yet. Head to the Predict tab to get started!
-          </p>
+          <div className="empty-state">
+            No predictions yet — head to the Predict tab to get started!
+          </div>
         ) : (
           <div className="table-scroll">
             <table className="pred-table">
@@ -154,52 +169,52 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {data.predictions.map((pred) => (
+                {data.predictions.map((pred, idx) => (
                   <tr
                     key={pred.id}
-                    className={
-                      pred.correct === 1
-                        ? "row-correct"
-                        : pred.correct === 0
-                        ? "row-wrong"
-                        : ""
-                    }
+                    className={[
+                      idx % 2 === 1 ? "row-alt" : "",
+                      pred.correct === 1 ? "row-correct" : "",
+                      pred.correct === 0 ? "row-wrong"   : "",
+                    ].filter(Boolean).join(" ")}
                   >
-                    <td>{new Date(pred.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <span className="matchup-text">
-                        {pred.home_team_name} <em>(H)</em> vs {pred.away_team_name}
-                      </span>
+                    <td className="td-date">
+                      {new Date(pred.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="td-matchup">
+                      <span className="matchup-home">{pred.home_team_name}</span>
+                      <span className="matchup-sep">vs</span>
+                      <span className="matchup-away">{pred.away_team_name}</span>
                     </td>
                     <td>{pred.predicted_winner}</td>
-                    <td>{pred.win_probability}%</td>
-                    <td>{pred.actual_winner ?? "—"}</td>
-                    <td className="result-cell">
+                    <td className="td-prob">{pred.win_probability}%</td>
+                    <td>{pred.actual_winner ?? <span className="td-empty">—</span>}</td>
+                    <td>
                       {pred.correct === 1 ? (
-                        <span className="badge correct">✓ Correct</span>
+                        <span className="badge badge-correct">✓ Correct</span>
                       ) : pred.correct === 0 ? (
-                        <span className="badge wrong">✗ Wrong</span>
+                        <span className="badge badge-wrong">✗ Wrong</span>
                       ) : (
-                        "—"
+                        <span className="td-empty">—</span>
                       )}
                     </td>
                     <td>
                       {pred.actual_winner ? null : pendingId === pred.id ? (
                         <div className="inline-result">
                           <button
-                            className="team-pick-btn"
+                            className="pick-btn"
                             onClick={() => submitResult(pred, pred.home_team_name)}
                           >
                             {pred.home_team_name}
                           </button>
                           <button
-                            className="team-pick-btn"
+                            className="pick-btn"
                             onClick={() => submitResult(pred, pred.away_team_name)}
                           >
                             {pred.away_team_name}
                           </button>
                           <button
-                            className="cancel-pick-btn"
+                            className="cancel-btn"
                             onClick={() => setPendingId(null)}
                           >
                             ✕
@@ -210,7 +225,7 @@ export default function Dashboard() {
                           className="add-result-btn"
                           onClick={() => setPendingId(pred.id)}
                         >
-                          Add Result
+                          + Add Result
                         </button>
                       )}
                     </td>

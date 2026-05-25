@@ -5,7 +5,9 @@
       "Bash(npm install *)",
       "Bash(npx vite *)",
       "Bash(curl *)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(npm run *)"
     ]
   }
 }
