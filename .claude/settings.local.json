@@ -7,7 +7,8 @@
       "Bash(curl *)",
       "Bash(gh auth *)",
       "Bash(python3 -m json.tool)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(grep -q '\\\\.__TRACKED_VAR__' src/index.css)"
     ]
   }
 }

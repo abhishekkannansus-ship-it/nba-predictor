@@ -6,21 +6,22 @@ import {
   PointElement,
   LineElement,
   Tooltip,
-  Legend,
   Filler,
 } from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Line } from "react-chartjs-2";
 import { getAccuracy, saveResult } from "../api";
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
-  Tooltip, Legend, Filler
+  Tooltip, Filler, ChartDataLabels
 );
 
 const LINE_OPTIONS = {
   responsive: true,
   plugins: {
     legend: { display: false },
+    datalabels: { display: false },
     tooltip: {
       callbacks: { label: (ctx) => `  ${ctx.parsed.y}% accuracy` },
       backgroundColor: "#16162a",
@@ -52,16 +53,16 @@ const LINE_OPTIONS = {
   },
 };
 
-const STAT_CONFIGS = [
-  { key: "accuracy",          label: "Accuracy",          format: (v) => `${v ?? 0}%`, accent: true },
-  { key: "total_predictions", label: "Predictions",        format: (v) => v ?? 0 },
-  { key: "correct",           label: "Correct",            format: (v) => v ?? 0 },
-  { key: "total_with_result", label: "With Result",        format: (v) => v ?? 0 },
+const STATS = [
+  { key: "accuracy",          label: "Accuracy",      fmt: (v) => `${v ?? 0}%`, accent: true },
+  { key: "total_predictions", label: "Predictions",   fmt: (v) => v ?? 0 },
+  { key: "correct",           label: "Correct",       fmt: (v) => v ?? 0 },
+  { key: "total_with_result", label: "With Result",   fmt: (v) => v ?? 0 },
 ];
 
 export default function Dashboard() {
-  const [data, setData]         = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [pendingId, setPendingId] = useState(null);
 
   const reload = () => {
@@ -88,21 +89,21 @@ export default function Dashboard() {
     return (
       <div className="loading-state">
         <span className="spinner spinner-lg" />
-        <span>Loading dashboard…</span>
+        Loading dashboard…
       </div>
     );
   }
 
   const hasOverTime = data?.accuracy_over_time?.length > 0;
 
-  const lineChartData = hasOverTime
+  const lineData = hasOverTime
     ? {
         labels: data.accuracy_over_time.map((d) => `Game ${d.game}`),
         datasets: [
           {
             data: data.accuracy_over_time.map((d) => d.accuracy),
             borderColor: "#FF6B35",
-            backgroundColor: "rgba(255,107,53,0.08)",
+            backgroundColor: "rgba(255,107,53,0.07)",
             fill: true,
             tension: 0.4,
             pointBackgroundColor: "#FF6B35",
@@ -122,22 +123,22 @@ export default function Dashboard() {
         <p className="page-subtitle">Track your prediction record over time</p>
       </div>
 
-      {/* ── Stat cards ── */}
+      {/* Stat cards */}
       <div className="stats-row">
-        {STAT_CONFIGS.map(({ key, label, format, accent }) => (
-          <div className={`stat-card ${accent ? "stat-card-accent" : ""}`} key={key}>
-            <div className="stat-value">{format(data?.[key])}</div>
+        {STATS.map(({ key, label, fmt, accent }) => (
+          <div key={key} className={`stat-card ${accent ? "stat-card-accent" : ""}`}>
+            <div className="stat-value">{fmt(data?.[key])}</div>
             <div className="stat-label">{label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Accuracy chart ── */}
-      <div className="dash-card chart-card">
+      {/* Accuracy chart */}
+      <div className="dash-card">
         <div className="card-header">Accuracy Over Time</div>
-        {lineChartData ? (
+        {lineData ? (
           <div className="chart-wrap">
-            <Line data={lineChartData} options={LINE_OPTIONS} />
+            <Line data={lineData} options={LINE_OPTIONS} />
           </div>
         ) : (
           <div className="empty-chart">
@@ -146,7 +147,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Predictions table ── */}
+      {/* Predictions table */}
       <div className="dash-card">
         <div className="card-header">All Predictions</div>
 
@@ -175,13 +176,13 @@ export default function Dashboard() {
                     className={[
                       idx % 2 === 1 ? "row-alt" : "",
                       pred.correct === 1 ? "row-correct" : "",
-                      pred.correct === 0 ? "row-wrong"   : "",
+                      pred.correct === 0 ? "row-wrong" : "",
                     ].filter(Boolean).join(" ")}
                   >
                     <td className="td-date">
                       {new Date(pred.created_at).toLocaleDateString()}
                     </td>
-                    <td className="td-matchup">
+                    <td>
                       <span className="matchup-home">{pred.home_team_name}</span>
                       <span className="matchup-sep">vs</span>
                       <span className="matchup-away">{pred.away_team_name}</span>
@@ -201,30 +202,20 @@ export default function Dashboard() {
                     <td>
                       {pred.actual_winner ? null : pendingId === pred.id ? (
                         <div className="inline-result">
-                          <button
-                            className="pick-btn"
-                            onClick={() => submitResult(pred, pred.home_team_name)}
-                          >
+                          <button className="pick-btn"
+                            onClick={() => submitResult(pred, pred.home_team_name)}>
                             {pred.home_team_name}
                           </button>
-                          <button
-                            className="pick-btn"
-                            onClick={() => submitResult(pred, pred.away_team_name)}
-                          >
+                          <button className="pick-btn"
+                            onClick={() => submitResult(pred, pred.away_team_name)}>
                             {pred.away_team_name}
                           </button>
-                          <button
-                            className="cancel-btn"
-                            onClick={() => setPendingId(null)}
-                          >
-                            ✕
-                          </button>
+                          <button className="cancel-btn"
+                            onClick={() => setPendingId(null)}>✕</button>
                         </div>
                       ) : (
-                        <button
-                          className="add-result-btn"
-                          onClick={() => setPendingId(pred.id)}
-                        >
+                        <button className="add-result-btn"
+                          onClick={() => setPendingId(pred.id)}>
                           + Add Result
                         </button>
                       )}

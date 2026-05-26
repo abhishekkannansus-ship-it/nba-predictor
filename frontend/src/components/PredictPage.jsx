@@ -6,18 +6,43 @@ import {
   BarElement,
   Tooltip,
 } from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Bar } from "react-chartjs-2";
+import confetti from "canvas-confetti";
+import TeamSelect from "./TeamSelect";
+import { logoUrl } from "../teamLogos";
 import { getTeams, predict } from "../api";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, ChartDataLabels);
+
+function TeamLogo({ abbr, className }) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !logoUrl(abbr)) return null;
+  return (
+    <img
+      src={logoUrl(abbr)}
+      className={className}
+      alt={abbr}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function PulsingDots() {
+  return (
+    <span className="pulsing-dots" aria-label="Calculating">
+      <span /><span /><span />
+    </span>
+  );
+}
 
 export default function PredictPage() {
-  const [teams, setTeams]       = useState([]);
-  const [homeTeam, setHomeTeam] = useState("");
-  const [awayTeam, setAwayTeam] = useState("");
-  const [result, setResult]     = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
+  const [teams, setTeams]         = useState([]);
+  const [homeTeam, setHomeTeam]   = useState("");
+  const [awayTeam, setAwayTeam]   = useState("");
+  const [result, setResult]       = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
   const [probWidth, setProbWidth] = useState(0);
 
   useEffect(() => {
@@ -34,11 +59,21 @@ export default function PredictPage() {
       );
   }, []);
 
-  // Animate the progress bar in after result arrives
+  // Animate probability bar and fire confetti when result arrives
   useEffect(() => {
     if (result) {
       setProbWidth(0);
-      const t = setTimeout(() => setProbWidth(result.win_probability), 60);
+      const t = setTimeout(() => setProbWidth(result.win_probability), 80);
+
+      confetti({
+        particleCount: 130,
+        spread: 75,
+        origin: { x: 0.5, y: 0.45 },
+        colors: ["#FFD700", "#FF6B35", "#7C3AED", "#ffffff", "#1a9fff"],
+        gravity: 0.9,
+        scalar: 1.1,
+      });
+
       return () => clearTimeout(t);
     }
   }, [result]);
@@ -62,7 +97,7 @@ export default function PredictPage() {
     }
   };
 
-  // Convert importance (0–1) to percent for display
+  // Importance values × 100 → percentages for display
   const chartData = result
     ? {
         labels: result.contributing_factors.map((f) => f.feature),
@@ -71,13 +106,14 @@ export default function PredictPage() {
             data: result.contributing_factors.map((f) =>
               parseFloat((f.importance * 100).toFixed(1))
             ),
-            backgroundColor: [
-              "rgba(255,107,53,0.90)",
-              "rgba(255,120,58,0.82)",
-              "rgba(255,133,63,0.74)",
-              "rgba(255,143,68,0.66)",
-              "rgba(255,150,72,0.58)",
-            ],
+            backgroundColor(ctx) {
+              const { chartArea, ctx: c } = ctx.chart;
+              if (!chartArea) return "#FF6B35";
+              const g = c.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+              g.addColorStop(0, "rgba(255,107,53,0.95)");
+              g.addColorStop(1, "rgba(124,58,237,0.85)");
+              return g;
+            },
             borderRadius: 6,
             borderSkipped: false,
           },
@@ -90,26 +126,19 @@ export default function PredictPage() {
     responsive: true,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        callbacks: { label: (ctx) => `  ${ctx.parsed.x.toFixed(1)}%` },
-        backgroundColor: "#16162a",
-        borderColor: "rgba(255,107,53,0.25)",
-        borderWidth: 1,
-        titleColor: "#f0f0ff",
-        bodyColor: "#FF8C42",
-        padding: 10,
-        cornerRadius: 8,
+      tooltip: { enabled: false },
+      datalabels: {
+        color: "#fff",
+        anchor: "center",
+        align: "center",
+        formatter: (v) => `${v.toFixed(1)}%`,
+        font: { family: "Inter", size: 11, weight: "700" },
       },
     },
     scales: {
       x: {
-        ticks: {
-          color: "#5a5a7a",
-          callback: (v) => v + "%",
-          font: { family: "Inter", size: 11 },
-        },
-        grid: { color: "rgba(255,255,255,0.04)" },
-        border: { display: false },
+        display: false,
+        grid: { display: false },
       },
       y: {
         ticks: {
@@ -122,6 +151,9 @@ export default function PredictPage() {
     },
     animation: { duration: 700, easing: "easeOutQuart" },
   };
+
+  const homeWins =
+    result && result.predicted_winner_abbr === result.home_team_abbr;
 
   return (
     <div className="predict-page">
@@ -137,47 +169,28 @@ export default function PredictPage() {
       {/* ── Matchup builder ── */}
       <div className="matchup-card">
         <div className="matchup-builder">
-          <div className="team-slot">
-            <div className="slot-label">Home Team</div>
-            <div className="select-wrap">
-              <select
-                className="team-select"
-                value={homeTeam}
-                onChange={(e) => setHomeTeam(e.target.value)}
-              >
-                {teams.map((t) => (
-                  <option key={t.abbreviation} value={t.abbreviation}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <span className="select-arrow">▾</span>
-            </div>
-            <div className="slot-badge home-badge">HOME</div>
-          </div>
+          <TeamSelect
+            teams={teams}
+            value={homeTeam}
+            onChange={setHomeTeam}
+            label="Home Team"
+            badge="HOME"
+          />
 
           <div className="vs-divider">
-            <div className="vs-ring">VS</div>
+            <div className="vs-ring">
+              <span className="vs-bolt">⚡</span>
+              <span className="vs-text">VS</span>
+            </div>
           </div>
 
-          <div className="team-slot">
-            <div className="slot-label">Away Team</div>
-            <div className="select-wrap">
-              <select
-                className="team-select"
-                value={awayTeam}
-                onChange={(e) => setAwayTeam(e.target.value)}
-              >
-                {teams.map((t) => (
-                  <option key={t.abbreviation} value={t.abbreviation}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <span className="select-arrow">▾</span>
-            </div>
-            <div className="slot-badge away-badge">AWAY</div>
-          </div>
+          <TeamSelect
+            teams={teams}
+            value={awayTeam}
+            onChange={setAwayTeam}
+            label="Away Team"
+            badge="AWAY"
+          />
         </div>
 
         <button
@@ -187,8 +200,8 @@ export default function PredictPage() {
         >
           {loading ? (
             <>
-              <span className="spinner" />
-              Analyzing matchup…
+              <PulsingDots />
+              <span className="btn-calc-text">Calculating…</span>
             </>
           ) : (
             "Predict Winner"
@@ -203,45 +216,51 @@ export default function PredictPage() {
           {/* Broadcast card */}
           <div className="broadcast-card">
             <div className="bc-teams">
-              <div className="bc-team">
+              {/* Home team */}
+              <div className={`bc-team ${homeWins ? "bc-winner-side" : "bc-loser-side"}`}>
+                <TeamLogo abbr={result.home_team_abbr} className="bc-logo" />
                 <div className="bc-abbr">{result.home_team_abbr}</div>
                 <div className="bc-name">{result.home_team}</div>
-                <div className="bc-role home-role">HOME</div>
+                <span className="bc-role home-role">HOME</span>
               </div>
-              <div className="bc-vs">VS</div>
-              <div className="bc-team bc-team-right">
+
+              <div className="bc-center">
+                <div className="bc-center-vs">VS</div>
+              </div>
+
+              {/* Away team */}
+              <div className={`bc-team bc-team-r ${!homeWins ? "bc-winner-side" : "bc-loser-side"}`}>
+                <TeamLogo abbr={result.away_team_abbr} className="bc-logo" />
                 <div className="bc-abbr">{result.away_team_abbr}</div>
                 <div className="bc-name">{result.away_team}</div>
-                <div className="bc-role away-role">AWAY</div>
+                <span className="bc-role away-role">AWAY</span>
               </div>
             </div>
 
             <div className="bc-divider" />
 
-            <div className="bc-winner">
+            {/* Winner */}
+            <div className="bc-result">
+              <div className="bc-crown">👑</div>
               <div className="bc-winner-label">PREDICTED WINNER</div>
               <div className="bc-winner-name">{result.predicted_winner}</div>
             </div>
 
+            {/* Probability bar */}
             <div className="bc-prob">
               <div className="bc-prob-row">
                 <span className="bc-prob-label">WIN PROBABILITY</span>
                 <span className="bc-prob-pct">{result.win_probability}%</span>
               </div>
               <div className="bc-prob-track">
-                <div
-                  className="bc-prob-fill"
-                  style={{ width: `${probWidth}%` }}
-                />
+                <div className="bc-prob-fill" style={{ width: `${probWidth}%` }} />
               </div>
             </div>
           </div>
 
-          {/* Contributing factors chart */}
+          {/* Contributing factors */}
           <div className="factors-card">
-            <div className="factors-header">
-              Top 5 Contributing Factors
-            </div>
+            <div className="factors-title">Top 5 Contributing Factors</div>
             <div className="chart-wrap">
               {chartData && <Bar data={chartData} options={chartOptions} />}
             </div>
