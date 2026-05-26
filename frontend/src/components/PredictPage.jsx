@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, Tooltip,
@@ -8,10 +8,49 @@ import { Bar } from "react-chartjs-2";
 import confetti from "canvas-confetti";
 import TeamSelect from "./TeamSelect";
 import { logoUrl } from "../teamLogos";
-import { getTeams, predict, getTeamStats } from "../api";
+import { getTeams, predict, getTeamStats, getAccuracy } from "../api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, ChartDataLabels);
 
+// ─────────────────────────────────────────────
+// Hardcoded 2026 playoff bracket (Conference Finals onwards)
+// ─────────────────────────────────────────────
+const BRACKET_2026 = [
+  {
+    round:    "East Conference Finals",
+    conf:     "EAST",
+    home:     { abbr: "BOS", name: "Boston Celtics",        seed: 1 },
+    away:     { abbr: "NYK", name: "New York Knicks",        seed: 3 },
+    homeWins: 3,
+    awayWins: 2,
+    status:   "active",
+    note:     "BOS leads 3-2  ·  Game 6",
+  },
+  {
+    round:    "West Conference Finals",
+    conf:     "WEST",
+    home:     { abbr: "OKC", name: "Oklahoma City Thunder",  seed: 1 },
+    away:     { abbr: "LAL", name: "Los Angeles Lakers",     seed: 4 },
+    homeWins: 3,
+    awayWins: 1,
+    status:   "active",
+    note:     "OKC leads 3-1  ·  Game 5",
+  },
+  {
+    round:    "NBA Finals 2026",
+    conf:     "FINALS",
+    home:     { abbr: null,  name: "East Champion",          seed: null },
+    away:     { abbr: null,  name: "West Champion",          seed: null },
+    homeWins: 0,
+    awayWins: 0,
+    status:   "upcoming",
+    note:     "Begins June 4, 2026",
+  },
+];
+
+// ─────────────────────────────────────────────
+// Small components
+// ─────────────────────────────────────────────
 function TeamLogo({ abbr, className }) {
   const [failed, setFailed] = useState(false);
   if (failed || !logoUrl(abbr)) return null;
@@ -37,8 +76,8 @@ function ConfidenceMeter({ probability }) {
     return () => clearTimeout(t);
   }, [probability]);
 
-  const R    = 80;
-  const circ = Math.PI * R;          // ≈ 251.33
+  const R      = 80;
+  const circ   = Math.PI * R;
   const offset = circ * (1 - disp / 100);
   const color  = disp > 70 ? "#22c55e" : disp >= 50 ? "#EAB308" : "#ef4444";
   const shadow = disp > 70 ? "#22c55e55" : disp >= 50 ? "#EAB30855" : "#ef444455";
@@ -47,11 +86,9 @@ function ConfidenceMeter({ probability }) {
   return (
     <div className="gauge-wrap">
       <svg viewBox="0 0 200 120" className="gauge-svg">
-        {/* background track */}
         <path d="M 20,100 A 80,80 0 0,1 180,100"
               fill="none" stroke="rgba(255,255,255,0.07)"
               strokeWidth="16" strokeLinecap="round" />
-        {/* colored arc */}
         <path d="M 20,100 A 80,80 0 0,1 180,100"
               fill="none" stroke={color}
               strokeWidth="16" strokeLinecap="round"
@@ -61,18 +98,13 @@ function ConfidenceMeter({ probability }) {
                 transition: "stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.6s",
                 filter: `drop-shadow(0 0 8px ${shadow})`,
               }} />
-        {/* percentage text */}
-        <text x="100" y="90" textAnchor="middle"
-              fontSize="29" fontWeight="900"
+        <text x="100" y="90" textAnchor="middle" fontSize="29" fontWeight="900"
               fill={color} fontFamily="Inter, sans-serif"
               style={{ transition: "fill 0.6s" }}>
           {disp}%
         </text>
-        {/* label */}
-        <text x="100" y="112" textAnchor="middle"
-              fontSize="8.5" fontWeight="700"
-              fill="#5a5a7a" fontFamily="Inter, sans-serif"
-              letterSpacing="1.5">
+        <text x="100" y="112" textAnchor="middle" fontSize="8.5" fontWeight="700"
+              fill="#5a5a7a" fontFamily="Inter, sans-serif" letterSpacing="1.5">
           {label}
         </text>
       </svg>
@@ -81,11 +113,11 @@ function ConfidenceMeter({ probability }) {
 }
 
 const STAT_ROWS = [
-  { key: "avg_pts",         label: "Points / Game",  fmt: v => v?.toFixed(1),                        higherBetter: true  },
-  { key: "avg_pts_allowed", label: "Opp PTS / G",    fmt: v => v?.toFixed(1),                        higherBetter: false },
-  { key: "off_rating",      label: "Off Rating",     fmt: v => v?.toFixed(1),                        higherBetter: true  },
-  { key: "def_rating",      label: "Def Rating",     fmt: v => v?.toFixed(1),                        higherBetter: false },
-  { key: "win_pct",         label: "Win %",          fmt: v => v != null ? `${(v*100).toFixed(0)}%` : "—", higherBetter: true  },
+  { key: "avg_pts",         label: "Points / Game", fmt: v => v?.toFixed(1),                              higherBetter: true  },
+  { key: "avg_pts_allowed", label: "Opp PTS / G",   fmt: v => v?.toFixed(1),                              higherBetter: false },
+  { key: "off_rating",      label: "Off Rating",    fmt: v => v?.toFixed(1),                              higherBetter: true  },
+  { key: "def_rating",      label: "Def Rating",    fmt: v => v?.toFixed(1),                              higherBetter: false },
+  { key: "win_pct",         label: "Win %",         fmt: v => v != null ? `${(v*100).toFixed(0)}%` : "—", higherBetter: true  },
 ];
 
 function StatsComparison({ homeStats, awayStats, homeAbbr, awayAbbr }) {
@@ -104,13 +136,9 @@ function StatsComparison({ homeStats, awayStats, homeAbbr, awayAbbr }) {
           const awayEdge = h != null && a != null && (higherBetter ? a > h : a < h);
           return (
             <div key={key} className="sc-row">
-              <span className={`sc-val sc-val-home ${homeEdge ? "sc-edge" : ""}`}>
-                {fmt(h) ?? "—"}
-              </span>
+              <span className={`sc-val sc-val-home ${homeEdge ? "sc-edge" : ""}`}>{fmt(h) ?? "—"}</span>
               <span className="sc-label">{label}</span>
-              <span className={`sc-val sc-val-away ${awayEdge ? "sc-edge" : ""}`}>
-                {fmt(a) ?? "—"}
-              </span>
+              <span className={`sc-val sc-val-away ${awayEdge ? "sc-edge" : ""}`}>{fmt(a) ?? "—"}</span>
             </div>
           );
         })}
@@ -119,6 +147,78 @@ function StatsComparison({ homeStats, awayStats, homeAbbr, awayAbbr }) {
   );
 }
 
+// ─────────────────────────────────────────────
+// Playoff series card
+// ─────────────────────────────────────────────
+function PlayoffSeriesCard({ series, onPredict, availTeams }) {
+  const { round, conf, home, away, homeWins, awayWins, status, note } = series;
+  const homeLeads   = homeWins > awayWins;
+  const awayLeads   = awayWins > homeWins;
+  const isFinals    = conf === "FINALS";
+  const canPredict  = status === "active" && home.abbr && away.abbr
+    && availTeams.some(t => t.abbreviation === home.abbr)
+    && availTeams.some(t => t.abbreviation === away.abbr);
+
+  return (
+    <div className={`series-card series-${status} ${isFinals ? "series-finals" : ""}`}>
+      <div className="series-round-label">
+        {conf !== "FINALS" && (
+          <span className={`series-conf-badge series-conf-${conf.toLowerCase()}`}>{conf}</span>
+        )}
+        {round}
+      </div>
+
+      <div className="series-teams-row">
+        {/* Home / top team */}
+        <div className={`series-team ${homeLeads ? "series-leader" : ""}`}>
+          {home.abbr
+            ? <TeamLogo abbr={home.abbr} className="series-logo" />
+            : <div className="series-tbd-logo">?</div>}
+          <div className="series-abbr">{home.abbr ?? "TBD"}</div>
+          {home.seed != null && <div className="series-seed">Seed {home.seed}</div>}
+        </div>
+
+        {/* Score column */}
+        <div className="series-vs-col">
+          {status === "upcoming" ? (
+            <div className="series-score-tbd">TBD</div>
+          ) : (
+            <div className="series-score">
+              <span className={homeLeads ? "score-lead" : ""}>{homeWins}</span>
+              <span className="score-sep">–</span>
+              <span className={awayLeads ? "score-lead" : ""}>{awayWins}</span>
+            </div>
+          )}
+          {note && <div className="series-note">{note}</div>}
+        </div>
+
+        {/* Away / bottom team */}
+        <div className={`series-team series-team-r ${awayLeads ? "series-leader" : ""}`}>
+          {away.abbr
+            ? <TeamLogo abbr={away.abbr} className="series-logo" />
+            : <div className="series-tbd-logo">?</div>}
+          <div className="series-abbr">{away.abbr ?? "TBD"}</div>
+          {away.seed != null && <div className="series-seed">Seed {away.seed}</div>}
+        </div>
+      </div>
+
+      {canPredict ? (
+        <button className="series-predict-btn" onClick={() => onPredict(home.abbr, away.abbr)}>
+          Predict This Game ↗
+        </button>
+      ) : status === "upcoming" ? (
+        <div className="series-upcoming-chip">
+          <span className="series-upcoming-dot" />
+          Teams TBD
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Chart options (module-level, stable reference)
+// ─────────────────────────────────────────────
 const chartOptions = {
   indexAxis: "y", responsive: true,
   plugins: {
@@ -140,6 +240,9 @@ const chartOptions = {
   animation: { duration: 700, easing: "easeOutQuart" },
 };
 
+// ─────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────
 export default function PredictPage() {
   const [teams, setTeams]         = useState([]);
   const [homeTeam, setHomeTeam]   = useState("");
@@ -151,7 +254,11 @@ export default function PredictPage() {
   const [awayStats, setAwayStats] = useState(null);
   const [gaugeProb, setGaugeProb] = useState(0);
   const [copied, setCopied]       = useState(false);
+  const [modelStats, setModelStats] = useState(null);
 
+  const matchupCardRef = useRef(null);
+
+  // ── Fetch teams + model accuracy on mount ──
   useEffect(() => {
     getTeams()
       .then(res => {
@@ -164,8 +271,13 @@ export default function PredictPage() {
       .catch(() =>
         setError("Could not reach the backend. Make sure the Flask server is running on port 5001.")
       );
+
+    getAccuracy()
+      .then(r => setModelStats(r.data))
+      .catch(() => {});
   }, []);
 
+  // ── Fetch team stats whenever selection changes ──
   useEffect(() => {
     if (!homeTeam) return;
     getTeamStats(homeTeam).then(r => setHomeStats(r.data)).catch(() => {});
@@ -176,6 +288,7 @@ export default function PredictPage() {
     getTeamStats(awayTeam).then(r => setAwayStats(r.data)).catch(() => {});
   }, [awayTeam]);
 
+  // ── Animate gauge + confetti when result arrives ──
   useEffect(() => {
     if (!result) return;
     setGaugeProb(0);
@@ -189,6 +302,7 @@ export default function PredictPage() {
     return () => clearTimeout(t);
   }, [result]);
 
+  // ── Handlers ──
   const handlePredict = async () => {
     if (!homeTeam || !awayTeam) return;
     if (homeTeam === awayTeam) { setError("Home and away teams must be different."); return; }
@@ -203,18 +317,26 @@ export default function PredictPage() {
     }
   };
 
+  const fillMatchup = (homeAbbr, awayAbbr) => {
+    setHomeTeam(homeAbbr);
+    setAwayTeam(awayAbbr);
+    setResult(null);
+    setTimeout(() => {
+      matchupCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 60);
+  };
+
   const handleShare = () => {
     if (!result) return;
     const loser = result.predicted_winner_abbr === result.home_team_abbr
-      ? result.away_team
-      : result.home_team;
+      ? result.away_team : result.home_team;
     const text = `🏀 NBA Predictor says: ${result.predicted_winner} wins vs ${loser} with ${result.win_probability}% confidence! Try it at nba-predictor-rust.vercel.app`;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-    }).catch(() => {});
+    navigator.clipboard.writeText(text)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2200); })
+      .catch(() => {});
   };
 
+  // ── Chart data ──
   const chartData = result ? {
     labels: result.contributing_factors.map(f => f.feature),
     datasets: [{
@@ -251,12 +373,34 @@ export default function PredictPage() {
           <span className="hero-chip">Random Forest Model</span>
           <span className="hero-chip">13 Features</span>
         </div>
+
+        {/* Model stats row */}
+        {modelStats && (
+          <div className="model-stats-bar">
+            <div className="ms-item">
+              <span className="ms-value">{modelStats.total_predictions.toLocaleString()}</span>
+              <span className="ms-label">Total Predictions</span>
+            </div>
+            <div className="ms-sep" />
+            <div className="ms-item">
+              <span className="ms-value ms-accent">
+                {modelStats.total_with_result > 0 ? `${modelStats.accuracy}%` : "—"}
+              </span>
+              <span className="ms-label">Overall Accuracy</span>
+            </div>
+            <div className="ms-sep" />
+            <div className="ms-item">
+              <span className="ms-value">2,639</span>
+              <span className="ms-label">Games Analyzed</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
       {/* ── Matchup builder ── */}
-      <div className="matchup-card">
+      <div className="matchup-card" ref={matchupCardRef}>
         <div className="matchup-builder">
           <TeamSelect
             teams={teams} value={homeTeam} label="Home Team" badge="HOME"
@@ -281,7 +425,7 @@ export default function PredictPage() {
         </button>
       </div>
 
-      {/* ── Stats comparison (live, updates on team change) ── */}
+      {/* ── Head-to-head stats comparison ── */}
       {homeStats && awayStats && homeTeam !== awayTeam && (
         <StatsComparison
           homeStats={homeStats} awayStats={awayStats}
@@ -289,14 +433,13 @@ export default function PredictPage() {
         />
       )}
 
-      {/* ── Result ── */}
+      {/* ── Prediction result ── */}
       {result && (
         <div className="result-section">
 
           {/* Broadcast card */}
           <div className="broadcast-card">
             <div className="bc-teams">
-              {/* Home */}
               <div className={`bc-team ${homeWins ? "bc-winner-side" : "bc-loser-side"}`}>
                 <TeamLogo abbr={result.home_team_abbr} className="bc-logo" />
                 <div className="bc-abbr">{result.home_team_abbr}</div>
@@ -310,12 +453,7 @@ export default function PredictPage() {
                   </div>
                 )}
               </div>
-
-              <div className="bc-center">
-                <div className="bc-center-vs">VS</div>
-              </div>
-
-              {/* Away */}
+              <div className="bc-center"><div className="bc-center-vs">VS</div></div>
               <div className={`bc-team bc-team-r ${!homeWins ? "bc-winner-side" : "bc-loser-side"}`}>
                 <TeamLogo abbr={result.away_team_abbr} className="bc-logo" />
                 <div className="bc-abbr">{result.away_team_abbr}</div>
@@ -339,14 +477,9 @@ export default function PredictPage() {
               <div className="bc-winner-name">{result.predicted_winner}</div>
             </div>
 
-            {/* Semicircular confidence gauge */}
             <ConfidenceMeter probability={gaugeProb} />
 
-            {/* Share button */}
-            <button
-              className={`share-btn ${copied ? "share-copied" : ""}`}
-              onClick={handleShare}
-            >
+            <button className={`share-btn ${copied ? "share-copied" : ""}`} onClick={handleShare}>
               {copied ? "✓ Copied to clipboard!" : "↗ Share Prediction"}
             </button>
           </div>
@@ -358,9 +491,37 @@ export default function PredictPage() {
               {chartData && <Bar data={chartData} options={chartOptions} />}
             </div>
           </div>
-
         </div>
       )}
+
+      {/* ── Playoffs 2026 bracket ── */}
+      <div className="playoffs-section">
+        <div className="playoffs-header">
+          <div className="playoffs-title-group">
+            <span className="playoffs-trophy">🏆</span>
+            <div>
+              <div className="playoffs-title">Playoffs 2026</div>
+              <div className="playoffs-subtitle">Conference Finals &amp; NBA Finals</div>
+            </div>
+          </div>
+          <div className="playoffs-live-badge">
+            <span className="live-dot" />
+            <span className="live-text">IN PROGRESS</span>
+          </div>
+        </div>
+
+        <div className="playoffs-grid">
+          {BRACKET_2026.map((series, i) => (
+            <PlayoffSeriesCard
+              key={i}
+              series={series}
+              onPredict={fillMatchup}
+              availTeams={teams}
+            />
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
