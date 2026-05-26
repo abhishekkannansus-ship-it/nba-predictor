@@ -8,7 +8,8 @@
       "Bash(gh auth *)",
       "Bash(python3 -m json.tool)",
       "Bash(npm run *)",
-      "Bash(grep -q '\\\\.__TRACKED_VAR__' src/index.css)"
+      "Bash(grep -q '\\\\.__TRACKED_VAR__' src/index.css)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py'\\).read\\(\\)\\); print\\('app.py syntax OK'\\)\")"
     ]
   }
 }

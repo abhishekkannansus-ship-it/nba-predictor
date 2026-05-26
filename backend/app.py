@@ -239,6 +239,30 @@ def get_accuracy():
     )
 
 
+@app.route("/team-stats/<abbr>", methods=["GET"])
+def team_stats_by_abbr(abbr):
+    stats = get_team_stats()
+    if not stats:
+        return jsonify({"error": "Model not trained yet."}), 503
+    abbr = abbr.upper()
+    if abbr not in stats:
+        return jsonify({"error": f"Unknown team: {abbr}"}), 404
+    t = stats[abbr]
+    wins_last10 = round(float(t["last10"]))
+    return jsonify({
+        "abbreviation": abbr,
+        "team_name": t["team_name"],
+        "win_pct": round(float(t["win_pct"]), 3),
+        "avg_pts": round(float(t["avg_pts"]), 1),
+        "avg_pts_allowed": round(float(t["avg_pts_allowed"]), 1),
+        "off_rating": round(float(t["off_rating"]), 1),
+        "def_rating": round(float(t["def_rating"]), 1),
+        "last10": float(t["last10"]),
+        "last10_wins": wins_last10,
+        "last10_losses": 10 - wins_last10,
+    })
+
+
 @app.route("/save-result", methods=["POST"])
 def save_result():
     data = request.get_json()

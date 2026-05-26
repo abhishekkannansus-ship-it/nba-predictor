@@ -10,3 +10,4 @@ export const predict = (homeTeam, awayTeam) =>
 export const getAccuracy = () => api.get("/accuracy");
 export const saveResult = (id, actualWinner) =>
   api.post("/save-result", { id, actual_winner: actualWinner });
+export const getTeamStats = (abbr) => api.get(`/team-stats/${abbr}`);
