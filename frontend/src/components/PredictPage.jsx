@@ -8,7 +8,7 @@ import { Bar } from "react-chartjs-2";
 import confetti from "canvas-confetti";
 import TeamSelect from "./TeamSelect";
 import { logoUrl } from "../teamLogos";
-import { getTeams, predict, getTeamStats, getAccuracy, upsertLocalPrediction } from "../api";
+import { getTeams, predict, getTeamStats, upsertLocalPrediction, computeLocalStats } from "../api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, ChartDataLabels);
 
@@ -269,11 +269,11 @@ export default function PredictPage() {
   const [awayStats, setAwayStats] = useState(null);
   const [gaugeProb, setGaugeProb] = useState(0);
   const [copied, setCopied]       = useState(false);
-  const [modelStats, setModelStats] = useState(null);
+  const [modelStats, setModelStats] = useState(computeLocalStats);
 
   const matchupCardRef = useRef(null);
 
-  // ── Fetch teams + model accuracy on mount ──
+  // ── Fetch teams on mount ──
   useEffect(() => {
     getTeams()
       .then(res => {
@@ -286,10 +286,6 @@ export default function PredictPage() {
       .catch(() =>
         setError("Could not reach the backend. Make sure the Flask server is running on port 5001.")
       );
-
-    getAccuracy()
-      .then(r => setModelStats(r.data))
-      .catch(() => {});
   }, []);
 
   // ── Fetch team stats whenever selection changes ──
@@ -327,7 +323,7 @@ export default function PredictPage() {
       setResult(res.data);
       const d = res.data;
       upsertLocalPrediction({
-        id: d.id,
+        id: Date.now(),
         home_team: d.home_team_abbr,
         away_team: d.away_team_abbr,
         home_team_name: d.home_team,
@@ -339,6 +335,8 @@ export default function PredictPage() {
         correct: null,
         created_at: new Date().toISOString(),
       });
+      setModelStats(computeLocalStats());
+      window.dispatchEvent(new Event("nba-prediction-saved"));
     } catch (err) {
       setError(err.response?.data?.error || "Prediction failed. Check the backend logs.");
     } finally {
@@ -404,26 +402,24 @@ export default function PredictPage() {
         </div>
 
         {/* Model stats row */}
-        {modelStats && (
-          <div className="model-stats-bar">
-            <div className="ms-item">
-              <span className="ms-value">{modelStats.total_predictions.toLocaleString()}</span>
-              <span className="ms-label">Total Predictions</span>
-            </div>
-            <div className="ms-sep" />
-            <div className="ms-item">
-              <span className="ms-value ms-accent">
-                {modelStats.total_with_result > 0 ? `${modelStats.accuracy}%` : "—"}
-              </span>
-              <span className="ms-label">Overall Accuracy</span>
-            </div>
-            <div className="ms-sep" />
-            <div className="ms-item">
-              <span className="ms-value">2,639</span>
-              <span className="ms-label">Games Analyzed</span>
-            </div>
+        <div className="model-stats-bar">
+          <div className="ms-item">
+            <span className="ms-value">{modelStats.total_predictions.toLocaleString()}</span>
+            <span className="ms-label">My Predictions</span>
           </div>
-        )}
+          <div className="ms-sep" />
+          <div className="ms-item">
+            <span className="ms-value ms-accent">
+              {modelStats.total_with_result > 0 ? `${modelStats.accuracy}%` : "—"}
+            </span>
+            <span className="ms-label">My Accuracy</span>
+          </div>
+          <div className="ms-sep" />
+          <div className="ms-item">
+            <span className="ms-value">2,639</span>
+            <span className="ms-label">Games Analyzed</span>
+          </div>
+        </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}

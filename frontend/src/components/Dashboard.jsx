@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,7 +10,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Line } from "react-chartjs-2";
-import { getAccuracy, saveResult, loadLocalPredictions, updateLocalResult } from "../api";
+import { loadLocalPredictions, updateLocalResult } from "../api";
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -54,79 +54,48 @@ const LINE_OPTIONS = {
 };
 
 const STATS = [
-  { key: "accuracy",          label: "Accuracy",      fmt: (v) => `${v ?? 0}%`, accent: true },
-  { key: "total_predictions", label: "Predictions",   fmt: (v) => v ?? 0 },
-  { key: "correct",           label: "Correct",       fmt: (v) => v ?? 0 },
-  { key: "total_with_result", label: "With Result",   fmt: (v) => v ?? 0 },
+  { key: "accuracy",          label: "Accuracy",    fmt: (v) => `${v ?? 0}%`, accent: true },
+  { key: "total_predictions", label: "Predictions", fmt: (v) => v ?? 0 },
+  { key: "correct",           label: "Correct",     fmt: (v) => v ?? 0 },
+  { key: "total_with_result", label: "With Result", fmt: (v) => v ?? 0 },
 ];
 
+function buildStats(preds) {
+  const withResult = preds.filter(p => p.actual_winner != null);
+  const correct = withResult.filter(p => p.correct === 1).length;
+  const accuracy = withResult.length > 0
+    ? Math.round(correct / withResult.length * 1000) / 10
+    : 0;
+  const chrono = [...preds].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  let rc = 0, rt = 0;
+  const accuracy_over_time = [];
+  for (const p of chrono) {
+    if (p.actual_winner != null) {
+      rt++;
+      if (p.correct === 1) rc++;
+      accuracy_over_time.push({
+        date: p.created_at,
+        accuracy: Math.round(rc / rt * 1000) / 10,
+        game: rt,
+      });
+    }
+  }
+  return { predictions: preds, accuracy, total_predictions: preds.length, correct, total_with_result: withResult.length, accuracy_over_time };
+}
+
 export default function Dashboard() {
-  const [data, setData]           = useState(null);
-  const [loading, setLoading]     = useState(true);
+  const [data, setData]           = useState(() => buildStats(loadLocalPredictions()));
   const [pendingId, setPendingId] = useState(null);
 
-  const buildStats = (preds) => {
-    const withResult = preds.filter(p => p.actual_winner != null);
-    const correct = withResult.filter(p => p.correct === 1).length;
-    const accuracy = withResult.length > 0
-      ? Math.round(correct / withResult.length * 1000) / 10
-      : 0;
-    const chrono = [...preds]
-      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    let rc = 0, rt = 0;
-    const accuracy_over_time = [];
-    for (const p of chrono) {
-      if (p.actual_winner != null) {
-        rt++;
-        if (p.correct === 1) rc++;
-        accuracy_over_time.push({ date: p.created_at, accuracy: Math.round(rc / rt * 1000) / 10, game: rt });
-      }
-    }
-    return { predictions: preds, accuracy, total_predictions: preds.length, correct, total_with_result: withResult.length, accuracy_over_time };
+  const reload = () => setData(buildStats(loadLocalPredictions()));
+
+  const submitResult = (pred, winnerName) => {
+    updateLocalResult(pred.id, winnerName, pred.predicted_winner);
+    setPendingId(null);
+    reload();
   };
 
-  const reload = () => {
-    setLoading(true);
-    getAccuracy()
-      .then((res) => {
-        const backendPreds = res.data.predictions || [];
-        const localPreds = loadLocalPredictions();
-        const backendIds = new Set(backendPreds.map(p => p.id));
-        const localOnly = localPreds.filter(p => !backendIds.has(p.id));
-        const merged = [...backendPreds, ...localOnly]
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setData({ ...buildStats(merged), hasLocalOnly: localOnly.length > 0 });
-      })
-      .catch(() => {
-        const localPreds = loadLocalPredictions();
-        setData({ ...buildStats(localPreds), backendOffline: true });
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { reload(); }, []);
-
-  const submitResult = async (pred, winnerName) => {
-    try {
-      const res = await saveResult(pred.id, winnerName);
-      updateLocalResult(pred.id, winnerName, res.data.correct);
-      setPendingId(null);
-      reload();
-    } catch {
-      alert("Failed to save result.");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-state">
-        <span className="spinner spinner-lg" />
-        Loading dashboard…
-      </div>
-    );
-  }
-
-  const hasOverTime = data?.accuracy_over_time?.length > 0;
+  const hasOverTime = data.accuracy_over_time.length > 0;
 
   const lineData = hasOverTime
     ? {
@@ -155,22 +124,11 @@ export default function Dashboard() {
         <p className="page-subtitle">Track your prediction record over time</p>
       </div>
 
-      {data?.backendOffline && (
-        <div className="storage-notice storage-notice-warn">
-          Backend offline — showing locally saved predictions
-        </div>
-      )}
-      {data?.hasLocalOnly && !data?.backendOffline && (
-        <div className="storage-notice">
-          Some predictions restored from local storage (backend may have reset)
-        </div>
-      )}
-
       {/* Stat cards */}
       <div className="stats-row">
         {STATS.map(({ key, label, fmt, accent }) => (
           <div key={key} className={`stat-card ${accent ? "stat-card-accent" : ""}`}>
-            <div className="stat-value">{fmt(data?.[key])}</div>
+            <div className="stat-value">{fmt(data[key])}</div>
             <div className="stat-label">{label}</div>
           </div>
         ))}
@@ -199,7 +157,7 @@ export default function Dashboard() {
       <div className="dash-card">
         <div className="card-header">All Predictions</div>
 
-        {!data?.predictions?.length ? (
+        {!data.predictions.length ? (
           <div className="empty-state">
             No predictions yet — head to the Predict tab to get started!
           </div>

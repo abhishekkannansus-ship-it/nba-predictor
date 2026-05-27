@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import PredictPage from "./components/PredictPage";
 import Dashboard from "./components/Dashboard";
-import { getAccuracy } from "./api";
+import { loadLocalPredictions } from "./api";
 
 const FLOATERS = [
   { style: { top: "6%",  left: "2%",  fontSize: "2.2rem", "--dur": "22s", "--delay": "0s"   } },
@@ -63,9 +63,10 @@ export default function App() {
   }, [tab]);
 
   useEffect(() => {
-    getAccuracy()
-      .then(r => setPredictions(r.data.predictions || []))
-      .catch(() => {});
+    const refresh = () => setPredictions(loadLocalPredictions());
+    refresh();
+    window.addEventListener("nba-prediction-saved", refresh);
+    return () => window.removeEventListener("nba-prediction-saved", refresh);
   }, []);
 
   useEffect(() => {
