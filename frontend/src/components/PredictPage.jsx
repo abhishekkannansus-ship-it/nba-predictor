@@ -20,7 +20,7 @@ const BRACKET_2026 = [
     round:    "East Conference Finals",
     conf:     "EAST",
     home:     { abbr: "NYK", name: "New York Knicks",        seed: 3 },
-    away:     { abbr: "CLE", name: "Cleveland Cavaliers",    seed: 1 },
+    away:     { abbr: "CLE", name: "Cleveland Cavaliers",    seed: 4 },
     homeWins: 4,
     awayWins: 0,
     status:   "completed",
@@ -34,7 +34,8 @@ const BRACKET_2026 = [
     homeWins: 2,
     awayWins: 2,
     status:   "active",
-    note:     "Series tied 2-2  ·  Game 5 upcoming",
+    live:     true,
+    note:     "Game 5  ·  Series tied 2-2",
   },
   {
     round:    "NBA Finals 2026",
@@ -44,7 +45,7 @@ const BRACKET_2026 = [
     homeWins: 0,
     awayWins: 0,
     status:   "upcoming",
-    note:     "Begins June 4, 2026",
+    note:     "June 3  ·  8:30 PM ET  ·  ABC",
   },
 ];
 
@@ -151,7 +152,7 @@ function StatsComparison({ homeStats, awayStats, homeAbbr, awayAbbr }) {
 // Playoff series card
 // ─────────────────────────────────────────────
 function PlayoffSeriesCard({ series, onPredict, availTeams }) {
-  const { round, conf, home, away, homeWins, awayWins, status, note } = series;
+  const { round, conf, home, away, homeWins, awayWins, status, note, live } = series;
   const homeLeads   = homeWins > awayWins;
   const awayLeads   = awayWins > homeWins;
   const isFinals    = conf === "FINALS";
@@ -160,12 +161,18 @@ function PlayoffSeriesCard({ series, onPredict, availTeams }) {
     && availTeams.some(t => t.abbreviation === away.abbr);
 
   return (
-    <div className={`series-card series-${status} ${isFinals ? "series-finals" : ""}`}>
+    <div className={`series-card series-${status} ${isFinals ? "series-finals" : ""} ${live ? "series-live" : ""}`}>
       <div className="series-round-label">
         {conf !== "FINALS" && (
           <span className={`series-conf-badge series-conf-${conf.toLowerCase()}`}>{conf}</span>
         )}
         {round}
+        {live && (
+          <span className="series-live-chip">
+            <span className="live-dot" />
+            LIVE
+          </span>
+        )}
       </div>
 
       <div className="series-teams-row">

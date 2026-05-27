@@ -176,6 +176,11 @@ export default function Dashboard() {
         ))}
       </div>
 
+      <div className="accuracy-disclaimer">
+        <span className="disclaimer-label">Note</span>
+        Live accuracy tracks 2026 playoff predictions. Playoff games are significantly harder to predict than regular season — Vegas sportsbooks also drop to ~55% accuracy in playoffs. Model was trained and tested at 63.3% accuracy on regular season data.
+      </div>
+
       {/* Accuracy chart */}
       <div className="dash-card">
         <div className="card-header">Accuracy Over Time</div>
