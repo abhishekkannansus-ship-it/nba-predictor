@@ -10,7 +10,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Line } from "react-chartjs-2";
-import { getAccuracy, saveResult } from "../api";
+import { getAccuracy, saveResult, loadLocalPredictions, updateLocalResult } from "../api";
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -65,11 +65,42 @@ export default function Dashboard() {
   const [loading, setLoading]     = useState(true);
   const [pendingId, setPendingId] = useState(null);
 
+  const buildStats = (preds) => {
+    const withResult = preds.filter(p => p.actual_winner != null);
+    const correct = withResult.filter(p => p.correct === 1).length;
+    const accuracy = withResult.length > 0
+      ? Math.round(correct / withResult.length * 1000) / 10
+      : 0;
+    const chrono = [...preds]
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    let rc = 0, rt = 0;
+    const accuracy_over_time = [];
+    for (const p of chrono) {
+      if (p.actual_winner != null) {
+        rt++;
+        if (p.correct === 1) rc++;
+        accuracy_over_time.push({ date: p.created_at, accuracy: Math.round(rc / rt * 1000) / 10, game: rt });
+      }
+    }
+    return { predictions: preds, accuracy, total_predictions: preds.length, correct, total_with_result: withResult.length, accuracy_over_time };
+  };
+
   const reload = () => {
     setLoading(true);
     getAccuracy()
-      .then((res) => setData(res.data))
-      .catch(() => {})
+      .then((res) => {
+        const backendPreds = res.data.predictions || [];
+        const localPreds = loadLocalPredictions();
+        const backendIds = new Set(backendPreds.map(p => p.id));
+        const localOnly = localPreds.filter(p => !backendIds.has(p.id));
+        const merged = [...backendPreds, ...localOnly]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setData({ ...buildStats(merged), hasLocalOnly: localOnly.length > 0 });
+      })
+      .catch(() => {
+        const localPreds = loadLocalPredictions();
+        setData({ ...buildStats(localPreds), backendOffline: true });
+      })
       .finally(() => setLoading(false));
   };
 
@@ -77,7 +108,8 @@ export default function Dashboard() {
 
   const submitResult = async (pred, winnerName) => {
     try {
-      await saveResult(pred.id, winnerName);
+      const res = await saveResult(pred.id, winnerName);
+      updateLocalResult(pred.id, winnerName, res.data.correct);
       setPendingId(null);
       reload();
     } catch {
@@ -122,6 +154,17 @@ export default function Dashboard() {
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">Track your prediction record over time</p>
       </div>
+
+      {data?.backendOffline && (
+        <div className="storage-notice storage-notice-warn">
+          Backend offline — showing locally saved predictions
+        </div>
+      )}
+      {data?.hasLocalOnly && !data?.backendOffline && (
+        <div className="storage-notice">
+          Some predictions restored from local storage (backend may have reset)
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="stats-row">

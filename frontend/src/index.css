@@ -398,6 +398,23 @@ body {
   margin-bottom: 24px;
 }
 
+.storage-notice {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: var(--r-sm);
+  padding: 9px 14px;
+  color: #a78bfa;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.storage-notice.storage-notice-warn {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: rgba(234, 179, 8, 0.25);
+  color: #fde68a;
+}
+
 .loading-state {
   display: flex;
   align-items: center;
@@ -1401,6 +1418,40 @@ html.light .hero-title {
 .series-card.series-upcoming {
   border-style: dashed;
   opacity: 0.82;
+}
+
+.series-card.series-completed {
+  border-color: rgba(255, 215, 0, 0.3);
+  box-shadow: var(--shadow), 0 0 24px rgba(255, 215, 0, 0.06);
+  opacity: 0.9;
+}
+
+.series-winner-banner {
+  background: rgba(255, 215, 0, 0.07);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f5c842;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.series-final-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #f5c842;
+  padding: 7px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  background: rgba(255, 215, 0, 0.05);
 }
 
 /* Finals card spans full width */

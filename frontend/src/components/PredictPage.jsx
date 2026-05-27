@@ -8,7 +8,7 @@ import { Bar } from "react-chartjs-2";
 import confetti from "canvas-confetti";
 import TeamSelect from "./TeamSelect";
 import { logoUrl } from "../teamLogos";
-import { getTeams, predict, getTeamStats, getAccuracy } from "../api";
+import { getTeams, predict, getTeamStats, getAccuracy, upsertLocalPrediction } from "../api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, ChartDataLabels);
 
@@ -19,27 +19,27 @@ const BRACKET_2026 = [
   {
     round:    "East Conference Finals",
     conf:     "EAST",
-    home:     { abbr: "BOS", name: "Boston Celtics",        seed: 1 },
-    away:     { abbr: "NYK", name: "New York Knicks",        seed: 3 },
-    homeWins: 3,
-    awayWins: 2,
-    status:   "active",
-    note:     "BOS leads 3-2  ·  Game 6",
+    home:     { abbr: "NYK", name: "New York Knicks",        seed: 3 },
+    away:     { abbr: "CLE", name: "Cleveland Cavaliers",    seed: 1 },
+    homeWins: 4,
+    awayWins: 0,
+    status:   "completed",
+    note:     "NYK wins 4-0  ·  Series Final",
   },
   {
     round:    "West Conference Finals",
     conf:     "WEST",
     home:     { abbr: "OKC", name: "Oklahoma City Thunder",  seed: 1 },
-    away:     { abbr: "LAL", name: "Los Angeles Lakers",     seed: 4 },
-    homeWins: 3,
-    awayWins: 1,
+    away:     { abbr: "SAS", name: "San Antonio Spurs",      seed: 2 },
+    homeWins: 2,
+    awayWins: 2,
     status:   "active",
-    note:     "OKC leads 3-1  ·  Game 5",
+    note:     "Series tied 2-2  ·  Game 5 upcoming",
   },
   {
     round:    "NBA Finals 2026",
     conf:     "FINALS",
-    home:     { abbr: null,  name: "East Champion",          seed: null },
+    home:     { abbr: "NYK", name: "New York Knicks",        seed: null },
     away:     { abbr: null,  name: "West Champion",          seed: null },
     homeWins: 0,
     awayWins: 0,
@@ -202,6 +202,12 @@ function PlayoffSeriesCard({ series, onPredict, availTeams }) {
         </div>
       </div>
 
+      {status === "completed" && (
+        <div className="series-winner-banner">
+          👑 {homeWins > awayWins ? home.name : away.name} advances to NBA Finals
+        </div>
+      )}
+
       {canPredict ? (
         <button className="series-predict-btn" onClick={() => onPredict(home.abbr, away.abbr)}>
           Predict This Game ↗
@@ -209,8 +215,10 @@ function PlayoffSeriesCard({ series, onPredict, availTeams }) {
       ) : status === "upcoming" ? (
         <div className="series-upcoming-chip">
           <span className="series-upcoming-dot" />
-          Teams TBD
+          {!home.abbr && !away.abbr ? "Teams TBD" : "Opponent TBD"}
         </div>
+      ) : status === "completed" ? (
+        <div className="series-final-chip">✓ Series Complete</div>
       ) : null}
     </div>
   );
@@ -310,6 +318,20 @@ export default function PredictPage() {
     try {
       const res = await predict(homeTeam, awayTeam);
       setResult(res.data);
+      const d = res.data;
+      upsertLocalPrediction({
+        id: d.id,
+        home_team: d.home_team_abbr,
+        away_team: d.away_team_abbr,
+        home_team_name: d.home_team,
+        away_team_name: d.away_team,
+        predicted_winner: d.predicted_winner,
+        win_probability: d.win_probability,
+        contributing_factors: d.contributing_factors,
+        actual_winner: null,
+        correct: null,
+        created_at: new Date().toISOString(),
+      });
     } catch (err) {
       setError(err.response?.data?.error || "Prediction failed. Check the backend logs.");
     } finally {
